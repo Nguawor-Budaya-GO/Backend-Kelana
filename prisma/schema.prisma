@@ -1,15 +1,192 @@
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
+    id           Int      @id @default(autoincrement())
+    email        String   @unique
+    name         String?
+    password     String
+    profileImage String?
+    bio          String?
+    location     String?
+    points       Int      @default(0)
+    level        Int      @default(1)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    // Relasi
+    stories      Story[]
+    checkIns     CheckIn[]
+    savedEvents  SavedEvent[]
+    achievements UserAchievement[]
+    comments     Comment[]
+    likes        Like[]
+}
+
+model Event {
+    id          Int       @id @default(autoincrement())
+    title       String
+    description String
+    latitude    Float
+    longitude   Float
+    address     String
+    startDate   DateTime
+    endDate     DateTime?
+    startTime   String?
+    endTime     String?
+    imageUrl    String?
+    organizer   String?
+    contactInfo String?
+    ticketPrice Float?
+    maxCapacity Int
+    isActive    Boolean   @default(true)
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+
+    // Relasi
+    checkIns    CheckIn[]
+    savedEvents SavedEvent[]
+    stories     Story[]
+    eventImages EventImage[]
+}
+
+model EventImage {
+    id        Int      @id @default(autoincrement())
+    eventId   Int
+    imageUrl  String
+    createdAt DateTime @default(now())
+
+    // Relasi
+    event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// Model CheckIn - Validasi kehadiran di event
+model CheckIn {
+    id           Int      @id @default(autoincrement())
+    userId       Int
+    eventId      Int
+    latitude     Float
+    longitude    Float
+    pointsEarned Int      @default(10)
+    checkedInAt  DateTime @default(now())
+
+    // Relasi
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, eventId])
+}
+
+// Model Story - Cerita pengguna tentang event
+model Story {
+    id            Int      @id @default(autoincrement())
+    userId        Int
+    eventId       Int
+    title         String
+    content       String
+    rating        Int? // 1-5 stars
+    mediaUrls     String? // JSON array untuk multiple foto/video
+    isPublic      Boolean  @default(true)
+    likesCount    Int      @default(0)
+    commentsCount Int      @default(0)
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    // Relasi
+    user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    comments Comment[]
+    likes    Like[]
+}
+
+// Model Comment - Komentar pada cerita
+model Comment {
+    id        Int      @id @default(autoincrement())
+    storyId   Int
+    userId    Int
+    content   String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relasi
+    story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Model Like - Like pada cerita
+model Like {
+    id        Int      @id @default(autoincrement())
+    storyId   Int
+    userId    Int
+    createdAt DateTime @default(now())
+
+    // Relasi
+    story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, storyId])
+}
+
+// Model SavedEvent - Event yang disimpan ke kalender pengguna
+model SavedEvent {
+    id           Int       @id @default(autoincrement())
+    userId       Int
+    eventId      Int
+    reminderSet  Boolean   @default(false)
+    reminderTime DateTime?
+    notes        String?
+    savedAt      DateTime  @default(now())
+
+    // Relasi
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, eventId])
+}
+
+// Model Achievement - Pencapaian gamifikasi
+model Achievement {
+    id             Int      @id @default(autoincrement())
+    name           String
+    description    String
+    icon           String?
+    pointsRequired Int
+    badgeImage     String?
+    category       String // Bronze, Silver, Gold, Platinum
+    createdAt      DateTime @default(now())
+
+    // Relasi
+    userAchievements UserAchievement[]
+}
+
+// Model UserAchievement - Pencapaian yang diraih pengguna
+model UserAchievement {
+    id            Int      @id @default(autoincrement())
+    userId        Int
+    achievementId Int
+    earnedAt      DateTime @default(now())
+
+    // Relasi
+    user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, achievementId])
+}
+
+// Model Notification - Notifikasi untuk pengguna
+model Notification {
+    id        Int      @id @default(autoincrement())
+    userId    Int
+    title     String
+    message   String
+    type      String // event_reminder, achievement, new_story, etc
+    isRead    Boolean  @default(false)
+    relatedId Int? // ID dari event/story/achievement terkait
+    createdAt DateTime @default(now())
 }

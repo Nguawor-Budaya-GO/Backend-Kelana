@@ -1,5 +1,5 @@
 // Routes index for API v1
-export {};
+export { };
 import { Router } from 'express';
 import { health } from '../controllers/healthController';
 
